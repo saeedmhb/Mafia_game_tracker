@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ردیاب مافیا</title>
+<style>
+:root{--bg:#f7f7f9;--card:#fff;--text:#19191d;--muted:#707078;--line:#dedee5;--accent:#5b5bd6;--accent2:#ececff;--danger:#b3261e;--ok:#1f7a43}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px}.wrap{max-width:760px;margin:auto;padding:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}h1,h2,h3,p{margin-top:0}h1{font-size:22px;margin-bottom:4px}.muted{color:var(--muted);font-size:14px}.row{display:flex;gap:8px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media(min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}button,textarea,select{font:inherit;font-size:16px}button{min-height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);padding:9px 12px}button.primary{background:var(--accent);color:white;border-color:var(--accent)}button.selected{background:var(--accent2);border-color:var(--accent);font-weight:700}button.danger{color:var(--danger)}button:disabled{opacity:.4}textarea,select{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;color:var(--text)}textarea{min-height:150px;resize:vertical}.hidden{display:none!important}.preview{background:#f2f2f5;border-radius:12px;padding:12px;margin-top:12px;color:var(--muted)}.history-item,.summary-item{border:1px solid var(--line);border-radius:12px;padding:11px;margin-top:8px}.summary-item{display:flex;justify-content:space-between;align-items:center}.player.inactive{opacity:.42;text-decoration:line-through}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.badge{font-size:13px;color:var(--muted)}.small{font-size:13px}.footer-space{height:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section id="setup" class="card">
+  <h1>ردیاب بازی مافیا</h1>
+  <p class="muted">اسم هر بازیکن را در یک خط بنویس. اسم کوتاه یا شماره سریع‌تر است.</p>
+  <form id="setupForm">
+    <textarea id="names" placeholder="سعید&#10;علی&#10;مریم&#10;رضا&#10;ندا&#10;سامان"></textarea>
+    <p id="error" class="small" style="color:var(--danger);display:none"></p>
+    <button class="primary" type="submit" style="width:100%;margin-top:10px">شروع بازی</button>
+  </form>
+</section>
+
+<section id="game" class="hidden">
+  <div class="top">
+    <div><strong>روز <span id="round">1</span></strong><div class="badge"><span id="activeCount">0</span> بازیکن فعال</div></div>
+    <button id="nextRound">روز بعد ←</button>
+  </div>
+
+  <div class="card">
+    <h3>ثبت سریع اتفاق</h3>
+    <div class="grid">
+      <button type="button" class="kind" data-kind="accuse">⚠️ اتهام</button>
+      <button type="button" class="kind" data-kind="vote">🗳️ رأی</button>
+    </div>
+    <p class="small" style="margin:14px 0 7px">۱. چه کسی؟</p>
+    <div id="actors" class="grid"></div>
+    <p class="small" style="margin:14px 0 7px">۲. به چه کسی؟</p>
+    <div id="targets" class="grid"></div>
+    <div id="preview" class="preview">نوع اتفاق را انتخاب کن.</div>
+    <button id="add" type="button" class="primary" disabled style="width:100%;margin-top:10px">ثبت</button>
+  </div>
+
+  <div class="card">
+    <h3>خلاصه رأی‌های روز <span id="voteRound">1</span></h3>
+    <div id="voteSummary"></div>
+  </div>
+
+  <div class="card">
+    <h3>بازیکن‌ها</h3>
+    <p class="muted">برای حذف یا برگرداندن بازیکن روی اسمش بزن.</p>
+    <div id="statuses" class="grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="top"><div><h3 style="margin-bottom:3px">تاریخچه</h3><div class="muted">رأی و اتهام‌های قبلی اینجاست.</div></div>
+      <select id="filter" style="width:auto"><option value="all">همه</option><option value="vote">رأی‌ها</option><option value="accuse">اتهام‌ها</option></select>
+    </div>
+    <div id="history"></div><div id="empty" class="preview">هنوز چیزی ثبت نشده.</div>
+  </div>
+
+  <div class="card">
+    <h3>شروع دوباره</h3>
+    <div class="grid">
+      <button id="samePlayers" type="button">🔄 بازی جدید با همین نفرات</button>
+      <button id="newPlayers" type="button" class="danger">👥 بازی جدید با نفرات جدید</button>
+    </div>
+    <p class="muted" style="margin-top:10px;margin-bottom:0">گزینهٔ اول فقط تاریخچه و دورها را پاک می‌کند؛ اسم‌ها می‌مانند.</p>
+  </div>
+</section>
+<div class="footer-space"></div>
+</div>
+<script>
+const KEY='mafiaTrackerStateV1';
+const fresh=()=>({players:[],round:1,events:[],kind:null,actor:null,target:null});
+let state=fresh();
+const $=s=>document.querySelector(s); const setup=$('#setup'),game=$('#game');
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.players))state=x}catch(e){}}
+function p(id){return state.players.find(x=>x.id===id)}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function active(){return state.players.filter(x=>x.active)}
+function renderPlayers(){
+ const mk=(x,role)=>`<button type="button" class="player ${state[role]===x.id?'selected ':''}${!x.active?'inactive':''}" data-role="${role}" data-id="${x.id}" ${(!x.active||(role==='target'&&state.actor===x.id))?'disabled':''}>${esc(x.name)}</button>`;
+ $('#actors').innerHTML=state.players.map(x=>mk(x,'actor')).join(''); $('#targets').innerHTML=state.players.map(x=>mk(x,'target')).join('');
+ $('#statuses').innerHTML=state.players.map(x=>`<button type="button" class="player ${x.active?'':'inactive'}" data-status="${x.id}">${esc(x.name)}<div class="small muted">${x.active?'فعال':'حذف شده'}</div></button>`).join('');
+ $('#activeCount').textContent=active().length;
+}
+function renderSelection(){document.querySelectorAll('.kind').forEach(b=>b.classList.toggle('selected',b.dataset.kind===state.kind));const a=p(state.actor),t=p(state.target);let s='نوع اتفاق را انتخاب کن.';if(state.kind&&!a)s=state.kind==='vote'?'رأی‌دهنده را انتخاب کن.':'اتهام‌زننده را انتخاب کن.';else if(a&&!t)s=`هدفِ ${a.name} را انتخاب کن.`;else if(a&&t)s=state.kind==='vote'?`${a.name} ← رأی به ← ${t.name}`:`${a.name} ← اتهام به ← ${t.name}`;$('#preview').textContent=s;$('#add').disabled=!(state.kind&&state.actor&&state.target&&state.actor!==state.target);renderPlayers()}
+function renderVotes(){$('#voteRound').textContent=state.round;const m=new Map();state.events.filter(e=>e.round===state.round&&e.kind==='vote').forEach(e=>m.set(e.target,(m.get(e.target)||0)+1));const arr=[...m.entries()].sort((a,b)=>b[1]-a[1]);$('#voteSummary').innerHTML=arr.length?arr.map(([id,n])=>`<div class="summary-item"><span>${esc(p(id)?.name||'?')}</span><strong>${n} رأی</strong></div>`).join(''):'<div class="muted">هنوز رأیی ثبت نشده.</div>'}
+function renderHistory(){const f=$('#filter').value;const arr=state.events.filter(e=>f==='all'||e.kind===f).slice().reverse();$('#empty').classList.toggle('hidden',arr.length>0);$('#history').innerHTML=arr.map(e=>`<div class="history-item"><div class="small muted">روز ${e.round} · ${e.kind==='vote'?'🗳️ رأی':'⚠️ اتهام'}</div><div style="margin-top:4px"><strong>${esc(p(e.actor)?.name||'?')}</strong> ← ${e.kind==='vote'?'رأی به':'اتهام به'} ← <strong>${esc(p(e.target)?.name||'?')}</strong></div><button type="button" data-delete="${e.id}" class="small danger" style="margin-top:8px">پاک کردن</button></div>`).join('')}
+function render(){if(!state.players.length){setup.classList.remove('hidden');game.classList.add('hidden');return}setup.classList.add('hidden');game.classList.remove('hidden');$('#round').textContent=state.round;renderSelection();renderVotes();renderHistory();save()}
+$('#setupForm').addEventListener('submit',e=>{e.preventDefault();const names=[...new Set($('#names').value.split(/\n|,/).map(x=>x.trim()).filter(Boolean))].slice(0,20);if(names.length<4){$('#error').textContent='حداقل ۴ بازیکن وارد کن.';$('#error').style.display='block';return}$('#error').style.display='none';state=fresh();state.players=names.map((name,i)=>({id:i+1,name,active:true}));render()});
+document.querySelectorAll('.kind').forEach(b=>b.addEventListener('click',()=>{state.kind=b.dataset.kind;renderSelection();save()}));
+function choose(e){const b=e.target.closest('[data-role]');if(!b||b.disabled)return;const role=b.dataset.role,id=Number(b.dataset.id);state[role]=id;if(role==='actor'&&state.target===id)state.target=null;renderSelection();save()}
+$('#actors').addEventListener('click',choose);$('#targets').addEventListener('click',choose);
+$('#add').addEventListener('click',()=>{if($('#add').disabled)return;state.events.push({id:Date.now()+Math.random(),round:state.round,kind:state.kind,actor:state.actor,target:state.target});state.actor=null;state.target=null;render()});
+$('#nextRound').addEventListener('click',()=>{state.round=Math.min(30,state.round+1);state.actor=null;state.target=null;render()});
+$('#statuses').addEventListener('click',e=>{const b=e.target.closest('[data-status]');if(!b)return;const x=p(Number(b.dataset.status));x.active=!x.active;if(!x.active&&state.actor===x.id)state.actor=null;if(!x.active&&state.target===x.id)state.target=null;render()});
+$('#history').addEventListener('click',e=>{const b=e.target.closest('[data-delete]');if(!b)return;state.events=state.events.filter(x=>x.id!==Number(b.dataset.delete));render()});$('#filter').addEventListener('change',renderHistory);
+$('#samePlayers').addEventListener('click',()=>{if(!confirm('تاریخچه و دورها پاک شوند و بازی با همین بازیکن‌ها از اول شروع شود؟'))return;state.events=[];state.round=1;state.kind=null;state.actor=null;state.target=null;state.players.forEach(x=>x.active=true);render()});
+$('#newPlayers').addEventListener('click',()=>{if(!confirm('همه اطلاعات بازی و اسم بازیکن‌ها پاک شوند؟'))return;const old=state.players.map(x=>x.name).join('\n');state=fresh();localStorage.removeItem(KEY);$('#names').value=old;render()});
+load();render();
+</script>
+</body></html>
